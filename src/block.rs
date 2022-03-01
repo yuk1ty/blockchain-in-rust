@@ -84,19 +84,52 @@ pub fn check_difficulty(hash: &BlockHash, difficulty: u128) -> bool {
     difficulty > difficulty_bytes_as_u128(&hash)
 }
 
-#[test]
-fn test_block() {
-    let mut block = Block::new(
-        0,
-        0,
-        vec![0; 32],
-        0,
-        "Genesis block".to_string(),
-        0x00008fffffffffffffffffffffffffff,
-    );
-    block.hash();
-    println!("{:?}", &block);
+#[cfg(test)]
+mod test {
+    use crate::{block::Block, blockchain::Blockchain, now};
 
-    block.mine();
-    println!("{:?}", &block);
+    #[test]
+    fn test_block() {
+        let difficulty = 0x00008fffffffffffffffffffffffffff;
+
+        let mut block = Block::new(
+            0,
+            now(),
+            vec![0; 32],
+            0,
+            "Genesis block".to_string(),
+            difficulty,
+        );
+
+        block.mine();
+        println!("Mined genesis block: {:?}", &block);
+
+        let mut last_hash = block.hash.clone();
+
+        let mut blockchain = Blockchain {
+            blocks: vec![block],
+        };
+
+        println!("Verify: {}", &blockchain.verify());
+
+        for i in 1..=10 {
+            let mut block = Block::new(
+                i,
+                now(),
+                last_hash,
+                0,
+                "Another block".to_string(),
+                difficulty,
+            );
+
+            block.mine();
+            println!("Mined genesis block: {:?}", &block);
+
+            last_hash = block.hash.clone();
+
+            blockchain.blocks.push(block);
+
+            println!("Verify: {}", &blockchain.verify());
+        }
+    }
 }
