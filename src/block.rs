@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::transaction::Transaction;
 use crate::{difficulty_bytes_as_u128, u128_bytes, u32_bytes, u64_bytes};
 use crate::{hashable::Hashable, BlockHash};
 
@@ -14,8 +15,7 @@ pub struct Block {
     pub prev_block_hash: BlockHash,
     /// A special number used for mining (for PoW verification)
     pub nonce: u64,
-    /// Any relevant information or events that have occurred for/in the block
-    pub payload: String,
+    pub transactions: Vec<Transaction>,
     pub difficulty: u128,
 }
 
@@ -27,7 +27,7 @@ impl Debug for Block {
             &self.index,
             &hex::encode(&self.hash),
             &self.timestamp,
-            &self.payload,
+            &self.transactions.len(),
             &self.nonce
         )
     }
@@ -38,8 +38,7 @@ impl Block {
         index: u32,
         timestamp: u128,
         prev_block_hash: BlockHash,
-        nonce: u64,
-        payload: String,
+        transactions: Vec<Transaction>,
         difficulty: u128,
     ) -> Self {
         Block {
@@ -47,8 +46,8 @@ impl Block {
             timestamp,
             hash: vec![0; 32],
             prev_block_hash,
-            nonce,
-            payload,
+            nonce: 0,
+            transactions,
             difficulty,
         }
     }
@@ -73,7 +72,12 @@ impl Hashable for Block {
         bytes.extend(&u128_bytes(&self.timestamp));
         bytes.extend(&self.prev_block_hash);
         bytes.extend(&u64_bytes(&self.nonce));
-        bytes.extend(self.payload.as_bytes());
+        bytes.extend(
+            self.transactions
+                .iter()
+                .flat_map(|transaction| transaction.bytes())
+                .collect::<Vec<u8>>(),
+        );
         bytes.extend(&u128_bytes(&self.difficulty));
 
         bytes
@@ -82,54 +86,4 @@ impl Hashable for Block {
 
 pub fn check_difficulty(hash: &BlockHash, difficulty: u128) -> bool {
     difficulty > difficulty_bytes_as_u128(&hash)
-}
-
-#[cfg(test)]
-mod test {
-    use crate::{block::Block, blockchain::Blockchain, now};
-
-    #[test]
-    fn test_block() {
-        let difficulty = 0x00008fffffffffffffffffffffffffff;
-
-        let mut block = Block::new(
-            0,
-            now(),
-            vec![0; 32],
-            0,
-            "Genesis block".to_string(),
-            difficulty,
-        );
-
-        block.mine();
-        println!("Mined genesis block: {:?}", &block);
-
-        let mut last_hash = block.hash.clone();
-
-        let mut blockchain = Blockchain {
-            blocks: vec![block],
-        };
-
-        println!("Verify: {}", &blockchain.verify());
-
-        for i in 1..=10 {
-            let mut block = Block::new(
-                i,
-                now(),
-                last_hash,
-                0,
-                "Another block".to_string(),
-                difficulty,
-            );
-
-            block.mine();
-            println!("Mined genesis block: {:?}", &block);
-
-            last_hash = block.hash.clone();
-
-            blockchain.blocks.push(block);
-
-            println!("Verify: {}", &blockchain.verify());
-        }
-    }
 }

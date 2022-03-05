@@ -3,8 +3,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub mod block;
 pub mod blockchain;
 pub mod hashable;
+pub mod transaction;
 
 type BlockHash = Vec<u8>;
+type Address = String;
 
 pub fn now() -> u128 {
     let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
